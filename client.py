@@ -108,13 +108,13 @@ def connect_to_server(ip_entries, entry_port):
     # Thêm logic kết nối socket tại đây
     
 def display_ip_port_input(canvas, width, height):
-    IP_height = height + 130
-    port_height = height + 180
+    IP_height = height + 110
+    port_height = height + 160
     def get_full_ip(entries):
         return '.'.join(entry.get() for entry in entries)
     
     # IP Label
-    label_ip = tk.Label(canvas.master, text="IP:", font=("Courier New", 14, "bold"), fg="#333333")
+    label_ip = tk.Label(canvas.master, text="IP:", font=("Courier New",16, "bold"), bg = "#953019", fg="#ffffff")
     canvas.create_window(width - 100, IP_height, window=label_ip, anchor="e")
     
     # Tạo các ô nhập cho địa chỉ IP
@@ -145,7 +145,7 @@ def display_ip_port_input(canvas, width, height):
         canvas.create_window(width + i * 60, IP_height, window=dot_label, anchor="center")
         
     # Port label
-    label_port = tk.Label(canvas.master, text="Port:", font=("Courier New", 14, "bold"), fg="#333333")
+    label_port = tk.Label(canvas.master, text="Port:", font=("Courier New",16, "bold"), bg = "#953019", fg="#ffffff")
     canvas.create_window(width - 80, port_height, window=label_port, anchor="e")
     
     # Port insert
@@ -168,10 +168,7 @@ def display_ip_port_input(canvas, width, height):
         canvas, "#953019", 
         "D:\\gitclone\\Socket-Programming-Project\\confirm.png", 
         window_width//2, window_height//2, 150, 
-        command=lambda: [
-            confirm_button.destroy(),
-            connect_to_server(ip_entries, entry_port)
-        ]
+        command=lambda: connect_to_server(ip_entries, entry_port)
     )
     canvas.create_window(width, height + 230, window=confirm_button, anchor="center")
         
