@@ -9,6 +9,9 @@ from io import BytesIO
 window_width = 1066
 window_height = 600
 
+def upload_folde():
+    pass
+
 def upload_file(sock, filepath):
     if not os.path.exists(filepath):
         print("Error: File not found.")
