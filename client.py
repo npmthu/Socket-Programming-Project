@@ -122,13 +122,11 @@ def cli_interface():
     host = input("Enter server host (e.g., 127.0.0.1): ").strip()
     port = int(input("Enter server port (e.g., 9999): ").strip())
 
-    # Add main socket for client-server communication
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
     try:
         # Add main socket for client-server communication
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect(host, port)
+        sock.connect((host, port))
         while True:
             command = input("Enter command (upload <filename/folder>, download <filename>, exit): ").strip()
 
