@@ -4,7 +4,7 @@ from tkinter import ttk
 import ttkbootstrap as ttk
 from PIL import Image
 
-menu_image = Image.open("images/menu_icon.png")
+menu_image = Image.open("menu_icon.png")
 
 class SlidePanel(ctk.CTkFrame):
     def __init__(self, parent, start_pos, end_pos):
