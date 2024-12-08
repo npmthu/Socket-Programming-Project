@@ -120,7 +120,6 @@ def handle_client(conn, addr, logger, update_connections):
         logger.log(f"[CLOSED] Connection with {addr} closed.")
         update_connections(-1)  # Decrement active connections
 
-
 def start_server_gui(logger, update_connections, host="127.0.0.1", port=9999):
     """
     Start the server and accept incoming client connections.
@@ -137,9 +136,16 @@ def start_server_gui(logger, update_connections, host="127.0.0.1", port=9999):
 
             while True:
                 conn, addr = server.accept()
-                thread = threading.Thread(target=handle_client, args=(conn, addr, logger, update_connections), daemon=True)
+                logger.log(f"[NEW CONNECTION] {addr} connected.")
+                update_connections(1)  # Increment active connections count
+
+                # Handle client in a separate thread
+                thread = threading.Thread(
+                    target=handle_client, 
+                    args=(conn, addr, logger, update_connections),
+                    daemon=True
+                )
                 thread.start()
-                logger.log(f"[ACTIVE CONNECTIONS] {threading.active_count() - 1}")
         except Exception as e:
             logger.log(f"[ERROR] Server encountered an error: {e}")
         finally:
@@ -155,42 +161,74 @@ def create_gui():
     """
     root = tk.Tk()
     root.title("Server Management")
+def create_gui():
+    """
+    Create the GUI for the server with a functional layout.
+    """
+    root = tk.Tk()
+    root.title("Server Management")
+    root.geometry("800x600")  # Adjust window size as needed
 
-    # Log display
+    # Main container for address and buttons
+    left_frame = tk.Frame(root, padx=10, pady=10)
+    left_frame.pack(side=tk.LEFT, fill=tk.Y)
+
+    # Address frame (Host, Port, Active Connections)
+    host_port_frame = tk.Frame(left_frame, borderwidth=3, relief="ridge", padx=15, pady=15, bg="#f0f0f0")
+    host_port_frame.pack(anchor="n", pady=20)
+
+    # Sub-frame for the IP label
+    ip_frame = tk.Frame(host_port_frame, borderwidth=1, relief="solid", padx=5, pady=5, bg="white")
+    ip_frame.pack(anchor="w", fill="x", pady=5)
+    ip_label = tk.Label(ip_frame, text="Host: Not started", font=("Helvetica", 12), bg="white")
+    ip_label.pack(anchor="w")
+
+    # Sub-frame for the Port label
+    port_frame = tk.Frame(host_port_frame, borderwidth=1, relief="solid", padx=5, pady=5, bg="white")
+    port_frame.pack(anchor="w", fill="x", pady=5)
+    port_label = tk.Label(port_frame, text="Port: Not started", font=("Helvetica", 12), bg="white")
+    port_label.pack(anchor="w")
+
+    # Sub-frame for the Connections label
+    connections_frame = tk.Frame(host_port_frame, borderwidth=1, relief="solid", padx=5, pady=5, bg="white")
+    connections_frame.pack(anchor="w", fill="x", pady=5)
+    connections_label = tk.Label(connections_frame, text="Active Connections: 0", font=("Helvetica", 12), bg="white")
+    connections_label.pack(anchor="w")
+
+    # Start Server button
+    start_button = tk.Button(left_frame, text="Start Server", command=lambda: start_server())
+    start_button.pack(pady=10, anchor="n")
+
+    # Exit button
+    exit_button = tk.Button(left_frame, text="Exit", command=root.destroy)
+    exit_button.pack(pady=10, anchor="n")
+
+    # Logger display
     log_text = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=80, height=20)
-    log_text.pack(padx=10, pady=10)
+    log_text.pack(side=tk.BOTTOM, padx=20, pady=20, fill=tk.BOTH, expand=True)
 
     # Logger instance
     logger = ServerLogger(log_text)
 
-    # Active connections label
-    connections_label = tk.Label(root, text="Active Connections: 0", font=("Helvetica", 12))
-    connections_label.pack(pady=5)
-
-    # Server address label
-    address_label = tk.Label(root, text="Server Address: Not started", font=("Helvetica", 12))
-    address_label.pack(pady=5)
-
     active_connections = 0
 
     def update_connections(change):
+        """
+        Update the active connections count.
+        """
         nonlocal active_connections
         active_connections += change
         connections_label.config(text=f"Active Connections: {active_connections}")
 
-    # Start the server
     def start_server():
+        """
+        Start the server and display IP/Port.
+        """
         host = "127.0.0.1"
         port = 9999
-        address_label.config(text=f"Server Address: {host}:{port}")
+        ip_label.config(text=f"Host: {host}")
+        port_label.config(text=f"Port: {port}")
         start_server_gui(logger, update_connections, host, port)
-
-    start_button = tk.Button(root, text="Start Server", command=start_server)
-    start_button.pack(pady=10)
-
-    # Exit button
-    exit_button = tk.Button(root, text="Exit", command=root.destroy)
-    exit_button.pack(pady=10)
 
     root.mainloop()
 
