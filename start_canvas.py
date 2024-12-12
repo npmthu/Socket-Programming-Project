@@ -114,7 +114,73 @@ class StartCanvas:
                 entry.delete(0, 'end')  # Xóa nội dung các ô nhập
             messagebox.showerror("Đăng nhập thất bại", "Mã PIN không đúng!")
             entries[0].focus_set()
+    def create_progress_window(self):
+        img_width = 600
+        img_height = 350
 
+        self.loading_canvas = tk.Canvas(self.master, width=img_width, height=img_height)
+        self.loading_canvas.place(relx=0.5, rely=0.5, anchor="center")
+
+        try:
+            self.loading_image = Image.open("D:\\gitclone\\Socket-Programming-Project\\loading.png")
+            self.loading_image = self.loading_image.resize((img_width, img_height), Image.LANCZOS)
+            self.loading_photo = ImageTk.PhotoImage(self.loading_image)
+
+            self.loading_canvas.create_image(0, 0, anchor="nw", image=self.loading_photo)
+            self.loading_canvas.image = self.loading_photo
+        except FileNotFoundError:
+            print("Error: Hình ảnh 'loading.png' không tìm thấy.")
+
+        canvas_width, canvas_height = 600, 10
+        self.progress_canvas = tk.Canvas(self.master, width=canvas_width, height=canvas_height)
+        self.progress_canvas.place(relx=0.5, rely=0.8, anchor="center")
+
+        self.percent_label = tk.Label(self.master, text="0%", font=("Courier New", 14, "bold"), bg="#ffffff", fg="#1c2554")
+        self.percent_label.place(relx=0.75, rely=0.75, anchor="center")
+
+        self.status_label = tk.Label(self.master, text="Uploading...", font=("Courier New", 14, "bold"), bg="#ffffff", fg="#1c2554")
+        self.status_label.place(relx=0.66, rely=0.75, anchor="center")
+
+        self.start_progress(self.progress_canvas, canvas_width, canvas_height)
+
+    def start_progress(self, canvas, canvas_width, canvas_height):
+        progress = {"value": 0}  
+
+        def update_progress():
+            if progress["value"] < 100: 
+                progress["value"] += 1
+                percent = progress["value"]
+                canvas.delete("progress_bar")
+                canvas.create_rectangle(0, 0, (percent * canvas_width) / 100, canvas_height, fill="green", tags="progress_bar")
+                self.percent_label.config(text=f"{percent}%")
+                canvas.after(50, update_progress) 
+            else:
+                self.status_label.config(text="Done!")
+                self.show_new_image()
+
+        update_progress()
+
+    def show_new_image(self):
+        self.loading_canvas.delete("all")
+
+        try:
+            new_image = Image.open("D:\\gitclone\\Socket-Programming-Project\\done.png")
+            new_image = new_image.resize((600, 350), Image.LANCZOS)
+            new_photo = ImageTk.PhotoImage(new_image)
+
+            self.loading_canvas.create_image(0, 0, anchor="nw", image=new_photo)
+            self.loading_canvas.image = new_photo
+        except FileNotFoundError:
+            print("Error: Hình ảnh 'done.png' không tìm thấy.")
+
+        self.master.after(3000, self.clear_loading_canvas)
+
+    def clear_loading_canvas(self):
+        self.loading_canvas.destroy()
+        self.progress_canvas.destroy()
+        self.percent_label.destroy()
+        self.status_label.destroy()
+        
     def display_ip_port_input(self, width, height):
         IP_height = height + 110
         port_height = height + 160
