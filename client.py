@@ -28,7 +28,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import application_message
 import upload_gui
-import temp_download_gui
+# import temp_download_gui
+import start_canvas
 
 CHUNK_SIZE = 4096  # 4 KB chunks
 
@@ -483,136 +484,12 @@ def cli_interface():
             if 'sock' in locals():
                 sock.close()
 
-# ---------------------------- Helper Functions ---------------------------- #
-
-def load_image(file_path, width=None, height=None):
-    """
-    Load and resize an image using Pillow.
-    """
-    try:
-        image = Image.open(file_path)
-        if width and height:
-            image = image.resize((width, height), Image.LANCZOS)
-        return ImageTk.PhotoImage(image)
-    except FileNotFoundError:
-        print(f"Error: Image '{file_path}' not found.")
-        return None
-
-def focus_next_entry(current_entry, next_entry):
-    """
-    Move focus to the next entry when a digit is entered.
-    """
-    if len(current_entry.get()) == 1:
-        next_entry.focus_set()
-
-# ---------------------------- Screens ---------------------------- #
-
-def display_pin_input(root, canvas):
-    """
-    Display PIN input fields for validation.
-    """
-    entries = []
-    for i in range(6):
-        entry = tk.Entry(
-            root,
-            width=2,
-            font=("Courier New", 30),
-            justify="center",
-            bg="#f5f5f5",
-            fg="#333333",
-            highlightthickness=2,
-            highlightbackground="#cccccc",
-            highlightcolor="#007BFF",
-            relief="flat",
-        )
-        canvas.create_window(window_width // 2 - 125 + i * 50, window_height // 2, window=entry, anchor="center")
-        entries.append(entry)
-
-    for i in range(5):
-        entries[i].bind("<KeyRelease>", lambda event, cur=entries[i], next=entries[i + 1]: focus_next_entry(cur, next))
-
-    entries[5].bind("<KeyRelease>", lambda event: check_pin(root, entries, canvas))
-    entries[0].focus_set()
-
-def check_pin(root, entries, canvas):
-    """
-    Check PIN and transition to IP/Port input if valid.
-    """
-    pin = ''.join(entry.get() for entry in entries)
-    if pin == "123456":  # Replace this with actual PIN validation logic
-        messagebox.showinfo("Access Granted", "Welcome!")
-        for entry in entries:
-            entry.destroy()
-        display_ip_port_input(root, canvas)
-    else:
-        for entry in entries:
-            entry.delete(0, tk.END)
-        messagebox.showerror("Access Denied", "Incorrect PIN!")
-        entries[0].focus_set()
-
-def display_ip_port_input(root, canvas):
-    """
-    Display input fields for server IP and port.
-    """
-    # Clear canvas for new content
-    for widget in root.winfo_children():
-        if isinstance(widget, tk.Entry) or isinstance(widget, tk.Button):
-            widget.destroy()
-
-    ip_label = tk.Label(root, text="IP:", font=("Courier New", 14, "bold"), fg="#333333", bg="white")
-    canvas.create_window(window_width // 2 - 100, window_height // 2 - 50, window=ip_label, anchor="e")
-
-    ip_entry = tk.Entry(root, font=("Courier New", 14), bg="#f5f5f5", fg="#333333")
-    canvas.create_window(window_width // 2, window_height // 2 - 50, window=ip_entry, anchor="w")
-
-    port_label = tk.Label(root, text="Port:", font=("Courier New", 14, "bold"), fg="#333333", bg="white")
-    canvas.create_window(window_width // 2 - 100, window_height // 2, window=port_label, anchor="e")
-
-    port_entry = tk.Entry(root, font=("Courier New", 14), bg="#f5f5f5", fg="#333333")
-    canvas.create_window(window_width // 2, window_height // 2, window=port_entry, anchor="w")
-
-    connect_button = tk.Button(
-        root,
-        text="Connect",
-        font=("Courier New", 14),
-        bg="#953019",
-        fg="white",
-        command=lambda: connect_to_server(ip_entry.get(), port_entry.get(), root),
-    )
-    canvas.create_window(window_width // 2, window_height // 2 + 50, window=connect_button)
-
 
 # ---------------------------- Main ---------------------------- #
-
 def main():
-    """
-    Entry point for the application.
-    """
-    window = tk.Tk()
-    window.title("Socket Programming Project")
-    window.geometry(f"{window_width}x{window_height}")
-
-    # Load intro background image
-    canvas = tk.Canvas(window, width=window_width, height=window_height)
-    canvas.pack()
-
-    bg_image = load_image("intro.png", window_width, window_height)
-    if bg_image:
-        canvas.create_image(0, 0, anchor="nw", image=bg_image)
-        window.image_refs = [bg_image]
-
-    # Add confirm button for PIN entry
-    confirm_button = tk.Button(
-        window,
-        text="Confirm",
-        font=("Courier New", 16),
-        bg="#953019",
-        fg="white",
-        command=lambda: display_pin_input(window, canvas),
-    )
-    canvas.create_window(window_width//2, window_height//2, window=confirm_button)
-
-    window.mainloop()
+    root = tk.Tk()
+    app = start_canvas.StartCanvas(root)  # Start the start_canvas
+    root.mainloop()
 
 if __name__ == "__main__":
     main()

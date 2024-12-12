@@ -3,6 +3,7 @@ import os
 from PIL import Image, ImageTk
 import customtkinter as ctk
 from tkinter import filedialog
+import client
 
 history = []
 path = "/"
@@ -23,16 +24,18 @@ class UploadGUI:
         self.load_image('pine.png')  # Replace with your image path
         icon_paths = ['upload_icon.png', 'download_icon.png', 'help_icon.png', 'exit_icon.png']  # Replace with actual icon paths
         button_names = ['UPLOAD', 'DOWNLOAD', 'HELP', 'EXIT']
-        for btn_text, icon_path in zip(button_names, icon_paths):
+        button_functions = [self.clicked_upload_button, self.clicked_download_button, self.clicked_help_button, self.clicked_exit_button]
+
+        for btn_text, icon_path, btn_function in zip(button_names, icon_paths, button_functions):
             btn = ctk.CTkButton(
                 self.left_panel, 
                 text=btn_text,
                 fg_color='#f4ebd5',
                 hover_color='#778966',
                 text_color='#3f5a33',
-                font = ('League Spartan', 20, 'bold'),
+                font=('League Spartan', 20, 'bold'),
                 image=self.load_button_icon(icon_path),
-                command=lambda t=btn_text: self.handle_left_button(t),
+                command=btn_function,  # Assign corresponding function here
                 height=60  # Make buttons thicker
             )
             btn.pack(pady=10, padx=10, fill='x')
@@ -114,9 +117,9 @@ class UploadGUI:
             print("Exiting application...")
             exit()
         elif button_name == 'Help':
-            print("Displaying help...")
+            self.clicked_help_button()
         elif button_name == 'Download':
-            clicked_download_button()
+            self.clicked_download_button()
         elif button_name == 'Upload':
             self.clicked_upload_button()
 
@@ -127,23 +130,130 @@ class UploadGUI:
     def hide(self):
         """Hide the upload frame."""
         self.upload_frame.pack_forget()
+    def clicked_help_button(self):
+    # Clear the upload display frame
+        for widget in self.upload_display_frame.winfo_children():
+            widget.destroy()
+
+        # Create a help title
+        help_title = ctk.CTkLabel(
+            self.upload_display_frame,
+            text="Help Instructions",
+            font=("League Spartan", 24, "bold"),
+            fg_color="#f4ebd5",
+            text_color="#953019"
+        )
+        help_title.pack(pady=10)
+
+        # Add help content
+        help_text = """
+        Welcome to the Help Section!
+        
+        1. **Upload Button**: Select and upload files to the server.
+        2. **Download Button**: Browse and download available files.
+        3. **Back Button**: Navigate back to the previous folder.
+        4. **Refresh Button**: Reload the current folder's file list.
+        5. **Exit Button**: Close the application.
+
+        For further assistance, contact support@yourdomain.com.
+        """
+        help_content = ctk.CTkLabel(
+            self.upload_display_frame,
+            text=help_text,
+            font=("Arial", 14),
+            justify="left",
+            fg_color="#f4ebd5",
+            text_color="#333333",
+            wraplength=700
+        )
+        help_content.pack(pady=20)
+
     def clicked_upload_button(self):
-        folder_path = self.browse_folder()
-        if folder_path:
-            # Ask user to choose upload mode (sequential or parallel)
+        """
+        Handles the Upload button click to allow users to upload either a file or a folder.
+        """
+        # Ask the user to select a file or folder
+        path = filedialog.askopenfilename(title="Select File") or filedialog.askdirectory(title="Select Folder")
+        if not path:
+            print("No file or folder selected.")
+            return
+
+        # Determine if the selected path is a file or folder
+        if os.path.isfile(path):
+            # Handle file upload
+            print(f"File selected: {path}")
+            save_path = filedialog.askstring("Save Path", "Enter save path on the server:")
+            if save_path:
+                try:
+                    client_socket = client.connect_to_server("127.0.0.1", 9999)  # Replace with actual host and port
+                    client.upload_files(client_socket, [path], save_path)
+                    client_socket.close()
+                except Exception as e:
+                    print(f"Error uploading file: {e}")
+        elif os.path.isdir(path):
+            # Handle folder upload
+            print(f"Folder selected: {path}")
             upload_mode = self.ask_upload_mode()
-            
-            if upload_mode == "Sequential":
-                # Sequential upload
-                save_path = '/desired/save/path'  # Define save path on server or local
-               # upload_folder_sequential(folder_path, save_path)
-            elif upload_mode == "Parallel":
-                # Parallel upload
-                host = "127.0.0.1"  # Example: Replace with actual server host
-                port = 9999          # Example: Replace with actual server port
-                # upload_folder_parallel(host, port, folder_path)
+            if upload_mode:
+                save_path = filedialog.askstring("Save Path", "Enter save path on the server:")
+                if save_path:
+                    if upload_mode == "Sequential":
+                        self.upload_folder_sequential(path, save_path)
+                    elif upload_mode == "Parallel":
+                        self.upload_folder_parallel(path)
+
+    def upload_folder_sequential(self, folder_path, save_path):
+        """
+        Sequentially upload a folder to the server.
+        """
+        try:
+            client_socket = client.connect_to_server("127.0.0.1", 9999)  # Replace with actual host and port
+            client.upload_folder_sequential(client_socket, folder_path, save_path)
+            client_socket.close()
+            print(f"Folder uploaded successfully (Sequential): {folder_path}")
+        except Exception as e:
+            print(f"Error uploading folder sequentially: {e}")
+
+    def upload_folder_parallel(self, folder_path):
+        """
+        Upload a folder to the server in parallel.
+        """
+        try:
+            client.upload_folder_parallel("127.0.0.1", 9999, folder_path)
+            print(f"Folder uploaded successfully (Parallel): {folder_path}")
+        except Exception as e:
+            print(f"Error uploading folder in parallel: {e}")
 
     def ask_upload_mode(self):
+        """
+        Opens a dialog for the user to select the upload mode (Sequential or Parallel).
+        """
+        from tkinter import Toplevel, IntVar, Radiobutton, Button
+
+        mode = IntVar(value=0)  # Default to no selection (0 = None, 1 = Sequential, 2 = Parallel)
+
+        # Create a pop-up window for upload mode selection
+        popup = Toplevel()
+        popup.title("Select Upload Mode")
+        popup.geometry("300x150")
+
+        Radiobutton(popup, text="Sequential", variable=mode, value=1).pack(anchor="w", pady=10, padx=20)
+        Radiobutton(popup, text="Parallel", variable=mode, value=2).pack(anchor="w", pady=10, padx=20)
+
+        def confirm_selection():
+            popup.destroy()  # Close the window when confirmed
+
+        Button(popup, text="Confirm", command=confirm_selection).pack(pady=10)
+
+        popup.wait_window()  # Wait for the user to close the dialog
+
+        if mode.get() == 1:
+            return "Sequential"
+        elif mode.get() == 2:
+            return "Parallel"
+        else:
+            return None
+
         """Ask the user to choose the upload mode: sequential or parallel."""
         modes = ["Sequential", "Parallel"]
         mode = filedialog.askstring("Select Upload Mode", "Choose upload mode:\n1. Sequential\n2. Parallel")
@@ -159,6 +269,11 @@ class UploadGUI:
     def clicked_refresh_button(self):
         print("Refresh button clicked")
     
+    def clicked_download_button():
+        print(f"download button clicked, path now is: {path}")
+    def clicked_exit_button():
+        print("Exiting application...")
+        exit()
     # Reset or reload the file display (for instance, clearing selected file label)
         self.selected_file_label.configure(text="No file selected")
     
@@ -176,9 +291,6 @@ def refresh_file_list(self):
 
     # Re-create file/folder buttons (or any dynamic UI elements)
     create_buttons(self.upload_display_frame, file_dictionary, '/')
-
-def clicked_download_button():
-    print(f"download button clicked, path now is: {path}")
 
 def delete_to_penultimate_slash():
     global path
@@ -295,8 +407,6 @@ def create_buttons(scrollable_frame, file_structure, parent = ""):
         col += 1
 
 def go_back(scrollable_frame, file_dictionary):
-    global history
-    global path
     global file_dictionary_variable
     global history
     global path
@@ -353,12 +463,12 @@ def build_file_dictionary(directory):
     return file_dict
 # Example usage:
 
-# Main application window
-window = tk.Tk()
-window.geometry("1000x600")
+# # Main application window
+# window = tk.Tk()
+# window.geometry("1000x600")
 uploads_folder = 'uploads'
 file_dictionary = build_file_dictionary(uploads_folder)
-upload_gui = UploadGUI(window)
-upload_gui.show()
+# upload_gui = UploadGUI(window)
+# upload_gui.show()
 
-window.mainloop()
+# window.mainloop()
