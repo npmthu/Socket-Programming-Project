@@ -6,6 +6,7 @@ from typing import Dict, Any
 class MessageType(Enum):
     REQUEST = 1
     RESPONSE = 2
+    RETRY = 3
 
 
 class ActionCode(Enum):
@@ -14,6 +15,7 @@ class ActionCode(Enum):
     DOWNLOAD = 3
     LIST_FILES = 4
     UPLOAD_FOLDER = 5 
+    HEART_BEAT = 6
 
 
 class StatusCode(Enum):
