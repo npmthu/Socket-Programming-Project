@@ -829,9 +829,7 @@ class App(tk.Tk):
         self.title("Socket Programming Project")
         self.iconphoto(True, tk.PhotoImage(file='icon.png'))
 
-        # Tạo StartCanvas với kích thước cố định và không dùng pack ở đây
-        start_canvas = StartCanvas(self, size[0], size[1], socket_container)
-        
+        self.create_start_canvas()        
         
         #test menu
         # client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -848,11 +846,15 @@ class App(tk.Tk):
         # self.progress_dialog = None
         # self.progress_dialog_created = False
 
-        # Kiểm tra trạng thái kết nối
+    def create_start_canvas(self):
+        for widget in self.winfo_children():
+                  widget.destroy()
+        state['CONNECTION_CORRUPTED'] = False
+        socket_container['socket'] = None
+        start_canvas = StartCanvas(self, self.width, self.height, socket_container)
         self.check_connection_state()
-
-        # Kiểm tra sự thay đổi của socket
         self.check_socket_change()
+
 
     def check_socket_change(self):
         # Kiểm tra nếu socket đã được kết nối
@@ -884,12 +886,16 @@ class App(tk.Tk):
 
     def check_connection_state(self):
         if state['CONNECTION_CORRUPTED']:
+            for widget in self.MenuFrame.winfo_children():
+                  widget.destroy()
+            #canvas = tk.Canvas(self)
+            #canvas.pack(expand=True, fill='both')
             for widget in self.winfo_children():
-                widget.destroy()
+                  widget.destroy()
+            
+            #state['CONNECTION_CORRUPTED'] = False
+            self.create_start_canvas()
 
-            time.sleep(2)
-            canvas = tk.Canvas(self, bg="#f4ebd5", highlightthickness=0)
-            canvas.pack(fill="both", expand=True)
         else:
             # In ra số lượng phần tử trong queue để kiểm tra
             try:
