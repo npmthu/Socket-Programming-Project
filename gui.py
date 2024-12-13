@@ -24,9 +24,9 @@ class MenuFrame(ctk.CTkFrame):
 
     def create_widgets(self):
         #pine image
-        self.left_panel = tk.Frame(self, width=200, background='#953019')
+        self.left_panel = ctk.CTkFrame(self, width=200, fg_color='#953019')
         self.left_panel.pack(side='left', fill='y')
-        self.image_label = tk.Label(self.left_panel, bg='#953019')
+        self.image_label = ctk.CTkLabel(self.left_panel,text ='', bg_color='#953019')
         self.image_label.pack(padx = 30, pady=10)
         image = Image.open('pine.png')
         image = image.resize((150, 150))
@@ -507,20 +507,21 @@ class UploadFrame(ctk.CTkFrame):
     def clicked_upload_file_button(self):
         save_path = self.extract_folder_path(self.path)
         filenames = filedialog.askopenfilenames()
-        filelist = list(filenames)
-        self.function_name_queue.put('upload_files')
-        self.function_args_queue.put((filelist, f'{save_path}'))
+        if(filenames != ""):
+            filelist = list(filenames)
+            self.function_name_queue.put('upload_files')
+            self.function_args_queue.put((filelist, f'{save_path}'))
 
-        print(f"clicked upload file button, file list: {filelist}")
-        print(f"clicked upload file button, self.path {self.path} save path: {save_path}")
+            print(f"clicked upload file button, file list: {filelist}")
+            print(f"clicked upload file button, self.path {self.path} save path: {save_path}")
 
     def clicked_upload_folder_button(self):
         save_path = self.extract_folder_path(self.path)
         foldernames = filedialog.askdirectory()
-        self.function_name_queue.put('upload_folder_sequential')
-        self.function_args_queue.put((f'{foldernames}', f'{save_path}'))
-        print("clicked upload folder button")
-        pass
+        if (foldernames != ""):
+            self.function_name_queue.put('upload_folder_sequential')
+            self.function_args_queue.put((f'{foldernames}', f'{save_path}'))
+            print("clicked upload folder button")
        
     def clicked_file_button(self, file_name):
         if not self.path.endswith('/'):
@@ -699,9 +700,9 @@ class StartCanvas(tk.Canvas):
         self.window_width = width
         self.window_height = height
         self.socket_container = socket_container
-        
-        self.pack()
 
+        self.pack(fill="both", expand=True)
+        
         self.load_background_image()
         self.create_start_button()
 
