@@ -828,7 +828,7 @@ class App(tk.Tk):
         self.minsize(size[0], size[1])
         self.title("Socket Programming Project")
         self.iconphoto(True, tk.PhotoImage(file='icon.png'))
-
+        self.progress_dialog = None
         self.create_start_canvas()        
         
         #test menu
@@ -888,16 +888,12 @@ class App(tk.Tk):
         if state['CONNECTION_CORRUPTED']:
             for widget in self.MenuFrame.winfo_children():
                   widget.destroy()
-            #canvas = tk.Canvas(self)
-            #canvas.pack(expand=True, fill='both')
             for widget in self.winfo_children():
                   widget.destroy()
             
-            #state['CONNECTION_CORRUPTED'] = False
             self.create_start_canvas()
 
         else:
-            # In ra số lượng phần tử trong queue để kiểm tra
             try:
                 while not gui_queue.empty():
                     action = gui_queue.get()
@@ -907,7 +903,6 @@ class App(tk.Tk):
                         if action[0] == 'create_progress_dialog':
                             print("receive create progress command")
                             _, title, mode = action
-                            # Truyền self làm parent
                             self.create_progress_dialog(self, title, mode)
                         elif action[0] == 'update_progress':
                             print("receive update progress command")
