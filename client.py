@@ -1,18 +1,11 @@
-import socket
 import os
 import threading
 import tkinter as tk
-from tkinter import filedialog, messagebox
+from tkinter import messagebox
 from tkinter import ttk
-from tkinter import Tk, Canvas, Button
-from PIL import Image, ImageTk, ImageDraw
-from io import BytesIO
-from threading import Thread
-from tkinter import PhotoImage
 import time
 import hashlib
 import struct
-from threading import Event
 import sys
 import json
 import queue 
@@ -65,19 +58,6 @@ def communicate_to_server(client):
                 communication.socket.close()
                 return
 
-import customtkinter as ctk
-import os
-
-
-import tkinter as tk
-from tkinter import ttk
-import os
-
-
-import tkinter as tk
-from tkinter import ttk
-import os
-
 class ProgressDialog(tk.Toplevel):
     def __init__(self, parent, top_title, mode='file'):
         """
@@ -88,7 +68,7 @@ class ProgressDialog(tk.Toplevel):
         print(f"display dialog {parent}")
         super().__init__(parent)
         self.title(top_title)
-        self.geometry('400x150')
+        self.geometry('800x300')
         self.resizable(False, False)
         self.parent = parent
         self.mode = mode
@@ -99,7 +79,7 @@ class ProgressDialog(tk.Toplevel):
         self.attributes('-topmost', True)
 
         # File/folder name label
-        self.name_label = ttk.Label(self, text="", font=('TkDefaultFont', 10), background="#953019", foreground="white")
+        self.name_label = ttk.Label(self, text="", font=('TkDefaultFont', 20), background="#953019", foreground="white")
         self.name_label.pack(pady=(10, 5))
 
         # Progress bar
@@ -116,7 +96,7 @@ class ProgressDialog(tk.Toplevel):
         self.progress.pack(pady=10, padx=10, fill="x")
 
         # Progress text
-        self.progress_text = ttk.Label(self, text="", font=('TkDefaultFont', 9), background="#953019", foreground="white")
+        self.progress_text = ttk.Label(self, text="", font=('TkDefaultFont', 18), background="#953019", foreground="white")
         self.progress_text.pack(pady=(0, 10))
 
         self.total_size = 0
@@ -125,6 +105,12 @@ class ProgressDialog(tk.Toplevel):
         self.is_canceled = False
         self.is_completed = False  # Flag to indicate the task is completed
         self.center_window()
+
+        # Override the close window button
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def on_closing(self):
+        messagebox.showinfo("Window Close", "The close button is disabled.")
 
     def center_window(self):
         """Centers the window on the screen"""
@@ -155,6 +141,7 @@ class ProgressDialog(tk.Toplevel):
         # Bỏ dòng self.after ở đây
         self._update_gui(progress_percent, text, file_name)
         return not self.is_canceled
+    
     def _update_gui(self, progress_percent, text, file_name):
         """
         Helper function to update GUI elements in main thread
@@ -267,30 +254,6 @@ class CommunicateToServer():
             for chunk in iter(lambda: f.read(CHUNK_SIZE), b""):
                 sha256_hash.update(chunk)
         return sha256_hash.hexdigest()
-
-    def authenticate_user(self, pin):
-        try:
-            # Create authentication message
-            auth_msg = application_message.Message(
-                msg_type=application_message.MessageType.REQUEST.value,
-                action_code=application_message.ActionCode.LOGIN.value,
-                status_code=application_message.StatusCode.SUCCESS.value,
-                payload=pin.encode()
-            )
-            self.socket.send(auth_msg.to_bytes())
-
-            # Receive authentication response
-            response_msg = application_message.Message.from_bytes(self.socket.recv(1024))
-
-            if response_msg.status_code == application_message.StatusCode.SUCCESS:
-                return True
-            else:
-                messagebox.showerror("Authentication Failed", 
-                                      response_msg.payload.decode('utf-8', errors='replace'))
-                return False
-        except Exception as e:
-            messagebox.showerror("Error", f"Authentication error: {e}")
-            return False
 
     def create_folder_structure(self, folder_path):
         folder_structure = {}
@@ -816,7 +779,7 @@ class CommunicateToServer():
         
 # ---------------------------- MainApp ---------------------------- #
 
-class App(tk.Tk):
+class App(ctk.CTk):
     def __init__(self, title, size):
         
         #Create window
@@ -827,34 +790,48 @@ class App(tk.Tk):
         self.geometry(f'{size[0]}x{size[1]}')
         self.minsize(size[0], size[1])
         self.title("Socket Programming Project")
-        self.iconphoto(True, tk.PhotoImage(file='icon.png'))
         self.progress_dialog = None
-        self.create_start_canvas()        
-        
-        #test menu
-        # client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # client.connect(("192.168.1.4", 9999))
-        # self.MenuFrame = MenuFrame(self, function_name_queue, function_args_queue, folder_structure_queue)
-        # print(f"self: {self}")
-        # # Run communication thread
-        # self.communicate_thread = threading.Thread(
-        #     target=communicate_to_server,
-        #     args=(client,),
-        #     daemon=True
-        # )
-        # self.communicate_thread.start()
-        # self.progress_dialog = None
-        # self.progress_dialog_created = False
+
+        self.set_icon("icon.ico")  # Try .ico first, then .png
+
+        self.create_start_canvas()
+
+    def set_icon(self, icon_path):
+        try:
+            # First, try setting the icon for all windows (including future ones)
+            self.wm_iconbitmap(default=icon_path) 
+        except tk.TclError:
+            print(f"Error: Could not load .ico icon from {icon_path}.")
+            try:
+                # If that fails, try setting the icon for the current window only using a different method
+                icon = tk.PhotoImage(file=icon_path)
+                self.iconphoto(False, icon)
+            except tk.TclError:
+                print(f"Error: Could not load icon using PhotoImage from {icon_path}.")
+                try:
+                    # If .ico fails, try using Pillow to load a PNG as a fallback
+                    if icon_path.endswith(".ico"):
+                        png_path = "icon.png"  # Assuming you have a PNG version
+                        if os.path.exists(png_path):
+                            icon_image = Image.open(png_path)
+                            icon_photo = ImageTk.PhotoImage(icon_image)
+                            self.iconphoto(True, icon_photo)
+                        else:
+                            print("Error: PNG fallback icon not found.")
+                    else:
+                        print("Error: Invalid icon file type. Only .ico and .png are supported.")
+                except Exception as e:
+                    print(f"Error: Could not load icon: {e}")     
+
 
     def create_start_canvas(self):
+        print("create_start_canvas")
         for widget in self.winfo_children():
-                  widget.destroy()
+            widget.destroy()
         state['CONNECTION_CORRUPTED'] = False
         socket_container['socket'] = None
         start_canvas = StartCanvas(self, self.width, self.height, socket_container)
-        self.check_connection_state()
         self.check_socket_change()
-
 
     def check_socket_change(self):
         # Kiểm tra nếu socket đã được kết nối
@@ -862,7 +839,6 @@ class App(tk.Tk):
             print(f"Socket is ready: {socket_container['socket']}")
             self.on_socket_ready()
         else:
-            print("cec")
             self.after(1000, self.check_socket_change)  # Lặp lại kiểm tra sau 100ms
 
     def on_socket_ready(self):
@@ -886,13 +862,11 @@ class App(tk.Tk):
 
     def check_connection_state(self):
         if state['CONNECTION_CORRUPTED']:
-            for widget in self.MenuFrame.winfo_children():
-                  widget.destroy()
-            for widget in self.winfo_children():
-                  widget.destroy()
-            
+            state['CONNECTION_CORRUPTED'] = False
+            socket_container['socket'] = None
+            messagebox.showerror("CONNECTION ERROR","Lost connection to server, program will restart in 2 seconds!")
+            time.sleep(2)            
             self.create_start_canvas()
-
         else:
             try:
                 while not gui_queue.empty():
@@ -942,12 +916,6 @@ class App(tk.Tk):
             self.update()
 
 if __name__ == "__main__":
-    #root = tk.Tk()
-    #cv = StartCanvas(root)
     root = App('Socket', (WINDOW_WIDTH, WINDOW_HEIGHT))
     root.mainloop()
-    #client_socket = connect_to_server('localhost', 6578)
-    #communication = CommunicateToServer(client_socket)
-    #communication.download_folder('folder1','C:\\Users\\thai\\Downloads\\testing')
-
         

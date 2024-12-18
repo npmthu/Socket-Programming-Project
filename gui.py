@@ -4,9 +4,10 @@ from tkinter import filedialog
 from tkinter import messagebox
 from PIL import ImageTk, Image
 import queue
-import os
 import time
 import socket
+
+DEFAULT_PIN = "123456"
 
 class MenuFrame(ctk.CTkFrame):
     def __init__(self, parent,
@@ -29,7 +30,7 @@ class MenuFrame(ctk.CTkFrame):
         self.image_label = ctk.CTkLabel(self.left_panel,text ='', bg_color='#953019')
         self.image_label.pack(padx = 30, pady=10)
         image = Image.open('pine.png')
-        image = image.resize((150, 150))
+        image = image.resize((250, 250))
         photo = ImageTk.PhotoImage(image)
         self.image_label.configure(image=photo)
         self.image_label.image = photo
@@ -309,6 +310,7 @@ class DownloadFrame(ctk.CTkFrame):
                 button.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
                 button.image = file_photo          
                 col += 1
+        # Auto-scroll to the top of the frame
 
     def clicked_refresh_button(self):
         self.function_name_queue.put('list_files')
@@ -693,85 +695,176 @@ class UploadFrame(ctk.CTkFrame):
             else:
                 self.path = '/'
 
-class StartCanvas(tk.Canvas):
+class StartCanvas(ctk.CTkFrame):
     def __init__(self, master, width, height, socket_container):
-        super().__init__(master, width=width, height=height)
-        
+        super().__init__(master, width=width, height=height, corner_radius=0)
+
         self.window_width = width
         self.window_height = height
         self.socket_container = socket_container
 
         self.pack(fill="both", expand=True)
-        
+
         self.load_background_image()
         self.create_start_button()
 
     def load_background_image(self):
         image_path = "intro.png"
         try:
-            image = Image.open(image_path)
-            image = image.resize((self.window_width, self.window_height), Image.LANCZOS)
-            photo = ImageTk.PhotoImage(image)
+            original_image = Image.open(image_path)
+            self.photo = ImageTk.PhotoImage(original_image)
 
-            self.create_image(0, 0, anchor="nw", image=photo)
-            self.image = photo  # Giữ tham chiếu tới ảnh để không bị xóa
+            self.bg_label = ctk.CTkLabel(self, image=self.photo, text="")
+            self.bg_label.pack(fill="both", expand=True)
+
+            # Bind the resize event to update the image size
+            self.bg_label.bind("<Configure>", self.resize_image)
+
         except FileNotFoundError:
             print("Error: Image file not found.")
 
+    def resize_image(self, event):
+        new_width = event.width
+        new_height = event.height
+
+        image_path = "intro.png"
+        original_image = Image.open(image_path)
+        
+        resized_image = original_image.resize((new_width, new_height), Image.LANCZOS)
+        self.photo = ImageTk.PhotoImage(resized_image)
+
+        self.bg_label.configure(image=self.photo)
+
     def create_start_button(self):
-        button1 = self.display_image_button(
-            "#953019", 
-            "button1.png", 
-            self.window_width // 2, 
-            self.window_height // 2 + 150, 
-            289, 
+        button_width = 200
+        button_height = 60
+        border_width = 3
+        corner_radius = 30  # Adjust for desired roundness
+
+        self.button1 = ctk.CTkButton(
+            self,
+            text="START",
+            font=("Arial Rounded MT Bold", 20),  # Similar font to the image
+            text_color="#1C1427",  # Dark text color
+            fg_color="#F7D791",  # Light yellow from the image
+            hover_color="#E1C581",  # Slightly darker yellow for hover
+            bg_color="#8A3722",
+            border_color="#1C1427",
+            border_width=border_width,
+            corner_radius=corner_radius,
+            width=button_width,
+            height=button_height,
             command=lambda: [
-                button1.destroy(),
-                self.display_pin_input(self.window_width // 2, self.window_height // 2 + 150)
+                self.button1.destroy(),
+                self.display_pin_input(
+                    self.window_width // 2, self.window_height // 2 + 150
+                )
             ]
         )
+        self.button1.place(
+            relx=0.5,
+            rely=(self.window_height // 2 + 150) / self.window_height,
+            anchor="center"
+        )
 
-    def display_image_button(self, bg_color, image_path, x, y, new_width, command=None):
-        try:
-            image = Image.open(image_path)
-            original_width, original_height = image.size
-            aspect_ratio = original_height / original_width
-            new_height = int(new_width * aspect_ratio)
-            image = image.resize((new_width, new_height), Image.LANCZOS)
-            photo = ImageTk.PhotoImage(image)
+    def display_ip_port_input(self, width, height):
+        IP_height = height + 110
+        port_height = height + 160
+        label_font = ctk.CTkFont("Courier New", 16, "bold")
+        entry_font = ctk.CTkFont("Courier New", 14)
 
-            button = tk.Button(
-                self.master,
-                image=photo,
-                command=command,
-                borderwidth=0,
-                highlightthickness=0,
-                relief="flat",
-                bg="white",
-                activebackground=bg_color
+        label_ip = ctk.CTkLabel(self, text="IP:", font=label_font, text_color="#43291f",
+                                bg_color='#f4ebd5')
+        label_ip.place(relx=(width - 100)/self.window_width, rely=IP_height/self.window_height, anchor="e")
+
+        ip_entries = []
+        for i in range(4):
+            entry = ctk.CTkEntry(
+                self,
+                width=50,
+                font=entry_font,
+                justify="center",
+                fg_color="#f4ebd5",
+                text_color="#43291f",
+                border_width=2,
+                border_color="#f4ebd5",
+                bg_color='#f4ebd5',
+                corner_radius=8
             )
-            button.image = photo  # Giữ tham chiếu tới ảnh để không bị xóa
-            self.create_window(x, y, window=button, anchor="center")
-            return button
-        except FileNotFoundError:
-            print(f"Error: Hình ảnh '{image_path}' không tìm thấy.")
+            entry.place(relx=(width - 30 + i * 60)/self.window_width, rely=IP_height/self.window_height, anchor="center")
+            ip_entries.append(entry)
 
+        for i in range(3):
+            ip_entries[i].bind("<KeyRelease>", lambda event, cur=ip_entries[i], next=ip_entries[i + 1]: self.focus_next_entry(cur, next, 3))
+            ip_entries[i].bind("<Right>", lambda event, cur=ip_entries[i], next=ip_entries[i + 1]: self.focus_next_entry(cur, next, 3))
+
+        for i in range(3):
+            dot_label = ctk.CTkLabel(self, text=".", font=label_font, text_color="#43291f",bg_color='#f4ebd5')
+            dot_label.place(relx=(width + i * 60)/self.window_width, rely=IP_height/self.window_height, anchor="center")
+
+        label_port = ctk.CTkLabel(self, text="Port:", font=label_font, text_color="#43291f",
+                                  bg_color='#f4ebd5')
+        label_port.place(relx=(width - 80)/self.window_width, rely=port_height/self.window_height, anchor="e")
+
+        entry_port = ctk.CTkEntry(
+            self,
+            width=120,
+            font=entry_font,
+            justify="center",
+            fg_color="#f4ebd5",
+            text_color="#43291f",
+            border_width=2,
+            border_color="#f4ebd5",
+            bg_color='#f4ebd5',
+            corner_radius=8
+        )
+        entry_port.place(relx=(width - 50)/self.window_width, rely=port_height/self.window_height, anchor="w")
+
+        # --- Confirm Button ---
+        button_width = 150
+        button_height = 40  # Adjust height as needed
+        border_width = 3
+        corner_radius = 20  # More rounded corners
+        
+        confirm_button = ctk.CTkButton(
+            self,
+            text="CONFIRM",
+            font=("Arial Rounded MT Bold", 16),  # Use a more visually appealing font
+            text_color="#1C1427", # Dark text color from your image
+            fg_color="#F7D791",  # Light yellow from your image
+            hover_color="#E1C581",  # Slightly darker yellow for hover effect
+            bg_color="#8A3722",  # Ensure transparent background
+            border_color="#1C1427", # Dark color from your image
+            border_width=border_width,
+            corner_radius=corner_radius,
+            width=button_width,
+            height=button_height,
+            command=lambda: self.connect_to_server(ip_entries, entry_port)
+        )
+        confirm_button.place(
+            relx=0.5,  # Center horizontally
+            rely=(height + 230) / self.window_height,
+            anchor="center"
+        )
+      
     def display_pin_input(self, width, height):
         entries = []
+        entry_font = ctk.CTkFont("Courier New", 30)
         for i in range(6):
-            entry = tk.Entry(
-                self.master,
-                width=2, 
-                font=("Courier New", 30),
+            entry = ctk.CTkEntry(
+                self,
+                width=50,
+                font=entry_font,
                 justify="center",
-                bg="#f5f5f5",
-                fg="#333333",
-                highlightthickness=2,
-                highlightbackground="#cccccc",
-                highlightcolor="#007BFF",
-                relief="flat",
+                fg_color="#f4ebd5",
+                text_color="#43291f",
+                border_width=2,
+                border_color="#f4ebd5",
+                bg_color='#f4ebd5',
+                corner_radius=8,
+                show="*"
             )
-            self.create_window(width - 125 + i * 50, height, window=entry, anchor="center")
+            entry.place(relx=(width - 125 + i * 50)/self.window_width, rely=height/self.window_height, anchor="center")
             entries.append(entry)
 
         for i in range(5):
@@ -783,109 +876,56 @@ class StartCanvas(tk.Canvas):
 
     def check_pin(self, entries):
         pin = ''.join(entry.get() for entry in entries)
-        if pin == "123456":
-            messagebox.showinfo("Đăng nhập thành công", "Chào mừng bạn đến với hệ thống!")
+        if pin == DEFAULT_PIN:
+            messagebox.showinfo("Success", "Welcome to the system!")
             for entry in entries:
-                entry.destroy()  # Xóa ô nhập PIN
-            self.display_ip_port_input(self.window_width // 2, self.window_height // 2)  # Hiển thị nhập IP/Port
+                entry.destroy()
+            self.display_ip_port_input(self.window_width // 2, self.window_height // 2)
         else:
             for entry in entries:
-                entry.delete(0, 'end')  # Xóa nội dung các ô nhập
-            messagebox.showerror("Đăng nhập thất bại", "Mã PIN không đúng!")
+                entry.delete(0, 'end')
+            messagebox.showerror("Error", "Incorrect PIN!")
             entries[0].focus_set()
 
     def focus_next_entry(self, current_entry, next_entry, num_digit):
-        if len(current_entry.get()) == num_digit:  # Khi người dùng đã nhập đủ số ký tự
+        if len(current_entry.get()) == num_digit:
             next_entry.focus_set()
-
-    def display_ip_port_input(self, width, height):
-        IP_height = height + 110
-        port_height = height + 160
-
-        label_ip = tk.Label(self.master, text="IP:", font=("Courier New", 16, "bold"), bg="#953019", fg="#ffffff")
-        self.create_window(width - 100, IP_height, window=label_ip, anchor="e")
-
-        ip_entries = []
-        for i in range(4):
-            entry = tk.Entry(
-                self.master,
-                width=3, 
-                font=("Courier New", 14),
-                justify="center",
-                bg="#f5f5f5",
-                fg="#333333",
-                highlightthickness=2,
-                highlightbackground="#cccccc",
-                highlightcolor="#007BFF",
-                relief="flat",
-            )
-            self.create_window(width - 30 + i * 60, IP_height, window=entry, anchor="center")
-            ip_entries.append(entry)
-
-        # Bind KeyRelease để kiểm tra khi người dùng nhập đủ số ký tự và di chuyển tới entry tiếp theo
-        for i in range(3):  # Chỉ bind cho 3 ô đầu (tới ô thứ 3 là dot sẽ xuất hiện)
-            ip_entries[i].bind("<KeyRelease>", lambda event, cur=ip_entries[i], next=ip_entries[i + 1]: self.focus_next_entry(cur, next, 3))
-
-        # Bind phím mũi tên phải (Right arrow) để di chuyển focus
-        for i in range(3):  # Chỉ bind cho 3 ô đầu
-            ip_entries[i].bind("<Right>", lambda event, cur=ip_entries[i], next=ip_entries[i + 1]: self.focus_next_entry(cur, next, 3))
-
-        # Thêm dấu "." giữa các entry IP
-        for i in range(3):
-            dot_label = tk.Label(self.master, text=".", font=("Courier New", 14, "bold"), bg="#953019", fg="#ffffff")
-            self.create_window(width + i * 60, IP_height, window=dot_label, anchor="center")
-
-        # Label và entry port
-        label_port = tk.Label(self.master, text="Port:", font=("Courier New", 16, "bold"), bg="#953019", fg="#ffffff")
-        self.create_window(width - 80, port_height, window=label_port, anchor="e")
-
-        entry_port = tk.Entry(
-            self.master,
-            width=19,
-            font=("Courier New", 14),
-            justify="left",
-            bg="#f5f5f5",
-            fg="#333333",
-            highlightthickness=2,
-            highlightbackground="#cccccc",
-            highlightcolor="#007BFF",
-            relief="flat",
-        )
-        self.create_window(width - 50, port_height, window=entry_port, anchor="w")
-
-        confirm_button = self.display_image_button(
-            "#953019", 
-            "confirm.png", 
-            width // 2, height // 2, 150, 
-            command=lambda: [
-                self.connect_to_server(ip_entries, entry_port),
-            ]
-        )
-        self.create_window(width, height + 230, window=confirm_button, anchor="center")
-
+  
     def connect_to_server(self, ip_entries, entry_port):
-        global global_socket
         ip = '.'.join(entry.get() for entry in ip_entries)
-        port = entry_port.get()
-
-        if not all(ip.split('.')) or not port.isdigit():
-            messagebox.showerror("Lỗi", "Vui lòng nhập đúng IP và Port!")
+        try:
+            port = int(entry_port.get())
+        except ValueError:
+            messagebox.showerror("Error", "Invalid port number!")
             return
 
-        messagebox.showinfo("Kết nối", f"Đang kết nối tới {ip}:{port}...")
-        # Add more
+        if not all(ip.split('.')) or not (0 <= port <= 65535):
+            messagebox.showerror("Error", "Please enter a valid IP and Port!")
+            return
+
+        messagebox.showinfo("Connecting", f"Connecting to {ip}:{port}...")
 
         for attempt in range(3):
-            try:
-                client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                client.connect((ip, int(port)))
-                self.socket_container['socket'] = client
-                return
-            except ConnectionError as e:
-                if attempt < 3 - 1:
-                    print(f"Connection failed: {e}. Retrying in 1 seconds...")
-                    time.sleep(1)
-                else:
-                    messagebox.showerror("Connection Error", "Unable to connect to the server.")
+                try:
+                    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    client.connect((ip, port))
+                    self.socket_container['socket'] = client
+                    messagebox.showinfo("Success", "Successfully connected to the server!")
+                    return
+                except ConnectionRefusedError:
+                    if attempt < 2:
+                        messagebox.showwarning("Connection Failed", f"Connection refused. Retrying in 1 second... (Attempt {attempt + 2})")
+                        time.sleep(1)
+                    else:
+                        messagebox.showerror("Connection Error", "Unable to connect to the server after multiple attempts.")
+                        return None
+                except OSError as e:
+                    if e.errno == 10049: # incorrect IP address
+                        messagebox.showerror("Error", "Invalid IP address. Please check and try again.")
+                        return None
+                    else:
+                        messagebox.showerror("Connection Error", f"An unexpected error occurred: {e}")
+                        return None
+                except Exception as e:
+                    messagebox.showerror("Connection Error", f"An unexpected error occurred: {e}")
                     return None
-

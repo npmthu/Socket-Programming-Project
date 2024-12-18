@@ -8,7 +8,6 @@ import tkinter as tk
 import sys
 import hashlib
 import struct
-import secrets
 
 import customtkinter as ctk
 import traceback
@@ -102,9 +101,6 @@ class ThreadSafeLogger:
     def warning(self, message):
         """Log a warning message"""
         self._write_log("WARNING", message)
-
-def random_pin():
-    return secrets.randbelow(90000000) + 10000000
 
 def receive_message(client_socket):
     """
@@ -311,11 +307,6 @@ def send_file(client_socket, filepath):
         )
         client_socket.sendall(error_msg.to_bytes())
         return False
-    
-def authenticate_user(pin):
-    # This is a simple authentication; modify for production use (e.g., a database)
-    correct_pin = 1234  # Replace with a secure method for actual use
-    return int(pin) == correct_pin
 
 def list_files_in_directory(directory):
     with data_lock:
@@ -363,28 +354,6 @@ def handle_client(client_socket):
                         payload=b"successful"
                     )
                     client_socket.sendall(response_msg.to_bytes())
-
-                elif action_msg.action_code == application_message.ActionCode.LOGIN.value:
-                    pin = action_msg.payload.decode()
-
-                    if not authenticate_user(pin):
-                        # Send authentication failure message
-                        response_msg = application_message.Message(
-                            msg_type=application_message.MessageType.RESPONSE.value, 
-                            action_code=application_message.ActionCode.LOGIN.value, 
-                            status_code=application_message.StatusCode.ERROR.value, 
-                            payload=b"Authentication failed"
-                        )
-                        client_socket.send(response_msg.to_bytes())
-                        return
-                    # Send authentication success message
-                    response_msg = application_message.Message(
-                        msg_type=application_message.MessageType.RESPONSE.value, 
-                        action_code=application_message.ActionCode.LOGIN.value, 
-                        status_code=application_message.StatusCode.SUCCESS.value, 
-                        payload=b"Authentication successful"
-                    )
-                    client_socket.send(response_msg.to_bytes())
 
                 elif action_msg.action_code == application_message.ActionCode.UPLOAD_FOLDER.value:
                     # Decode the payload from bytes to a UTF-8 string
@@ -445,7 +414,6 @@ def handle_client(client_socket):
 
                     global_logger.info(f"Server receive request LIST folder: {directory} at {datetime.now()}")
 
-
                 else:
                     # Send invalid command message
                     invalid_msg = application_message.Message(
@@ -460,6 +428,7 @@ def handle_client(client_socket):
                 with log_lock:
                     global_logger.error(f"Connection lost with client {client_socket.getpeername()}", e)
                 break
+            
             except Exception as e:
                 with log_lock:
                     global_logger.error(f"Error with client {client_socket.getpeername()}", e)
@@ -549,7 +518,10 @@ def create_gui():
     active_connections = 0
 
     # Main container frame
-    main_frame = ctk.CTkFrame(root, width=1200, height=600, corner_radius=10)
+    main_frame = ctk.CTkFrame(root,
+                              width=1200,
+                              height=600,
+                              corner_radius=10)
     main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
     main_frame.grid_rowconfigure(0, weight=1)  # Cho phép mở rộng hàng 0
     main_frame.grid_rowconfigure(1, weight=0)  # Hàng nút giữ cố định
@@ -557,61 +529,99 @@ def create_gui():
     main_frame.grid_columnconfigure(1, weight=1)  # Cột log mở rộng
 
     # Log Display Frame (central focus) using CTkScrollableFrame
-    log_frame = ctk.CTkScrollableFrame(main_frame, width=900, height=500, corner_radius=10)
+    log_frame = ctk.CTkScrollableFrame(main_frame,
+                                       width=900,
+                                       height=500,
+                                       corner_radius=10)
     log_frame.grid(row=0, column=1, rowspan=2, padx=20, pady=20, sticky="nsew")
 
-    log_text = tk.Text(log_frame, wrap=tk.WORD, font=("Arial", 20), state=tk.DISABLED, bg="light gray")
+    log_text = tk.Text(log_frame,
+                       wrap=tk.WORD,
+                       font=("Arial", 20),
+                       state=tk.DISABLED,
+                       bg="light gray")
     log_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
     global_logger = ThreadSafeLogger(DEFAULT_LOG_FILE, log_text)
 
     # Information Frame for Host, Port, and Connection Details
-    info_frame = ctk.CTkFrame(main_frame, width=300, height=180, corner_radius=10)
+    info_frame = ctk.CTkFrame(main_frame,
+                              width=300,
+                              height=180,
+                              corner_radius=10)
     info_frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
 
     # Host Entry
-    ctk.CTkLabel(info_frame, text="Host's IP:", font=("Arial", 14, "bold")).grid(row=0, column=0, padx=10, pady=10, sticky="w")
-    host_entry = ctk.CTkEntry(info_frame, textvariable=host_var, font=("Arial", 14))
+    host_label = ctk.CTkLabel(info_frame,
+                 text="Host's IP:",
+                 font=("Arial", 14, "bold"))
+    host_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+    host_entry = ctk.CTkEntry(info_frame,
+                              textvariable=host_var,
+                              font=("Arial", 14))
     host_entry.grid(row=0, column=1, padx=10, pady=10, sticky="w")
 
     # Port Entry
-    ctk.CTkLabel(info_frame, text="Port:", font=("Arial", 14, "bold")).grid(row=1, column=0, padx=10, pady=10, sticky="w")
-    port_entry = ctk.CTkEntry(info_frame, textvariable=port_var, font=("Arial", 14))
+    port_label = ctk.CTkLabel(info_frame,
+                              text="Port:",
+                              font=("Arial", 14, "bold"))
+    port_label.grid(row=1, column=0, padx=10, pady=10, sticky="w")
+    port_entry = ctk.CTkEntry(info_frame,
+                              textvariable=port_var,
+                              font=("Arial", 14))
     port_entry.grid(row=1, column=1, padx=10, pady=10, sticky="w")
 
     # Active Connections Entry
-    ctk.CTkLabel(info_frame, text="Active Connections:", font=("Arial", 14, "bold")).grid(row=2, column=0, padx=10, pady=10, sticky="w")
-    connection_entry = ctk.CTkEntry(info_frame, textvariable=connection_var, font=("Arial", 14), state="readonly")
+    connection_label = ctk.CTkLabel(info_frame,
+                                    text="Active Connections:",
+                                    font=("Arial", 14, "bold"))
+    connection_label.grid(row=2, column=0, padx=10, pady=10, sticky="w")
+    connection_entry = ctk.CTkEntry(info_frame,
+                                    textvariable=connection_var,
+                                    font=("Arial", 14),
+                                    state="readonly")
     connection_entry.grid(row=2, column=1, padx=10, pady=10, sticky="w")
 
-    # Function to update connection count
-    def update_connection_count(count):
-        connection_var.set(str(count))
-
     # Button Frame for Start and Exit Buttons
-    button_frame = ctk.CTkFrame(main_frame, width=300, height=80, corner_radius=10)
+    button_frame = ctk.CTkFrame(main_frame,
+                                width=300,
+                                height=80,
+                                corner_radius=10)
     button_frame.grid(row=1, column=0, padx=20, pady=20, sticky="nsew")
 
     # Start Server Button
-    ctk.CTkButton(
-        button_frame, text="Start Server", width=150, height=40, font=("Arial", 14), 
-        command=lambda: start_server_with_config(host_entry, port_entry)
-    ).grid(row=0, column=0, padx=20, pady=10)
+    start_button = ctk.CTkButton(button_frame,
+                                 text="Start Server",
+                                 width=150,
+                                 height=40,
+                                 font=("Arial", 14),
+                                 command=lambda: start_server_with_config(host_entry,
+                                                                          port_entry,
+                                                                          start_button,
+                                                                          exit_button))
+    start_button.grid(row=0, column=0, padx=20, pady=10)
 
     # Exit Button
-    ctk.CTkButton(
-        button_frame, text="Exit", width=150, height=40, font=("Arial", 14), 
-        command=root.quit
-    ).grid(row=0, column=1, padx=20, pady=10)
+    exit_button = ctk.CTkButton(button_frame,
+                                text="Exit",
+                                width=150,
+                                height=40,
+                                font=("Arial", 14),
+                                command=lambda: on_closing(root, exit_button),
+                                state="disabled"
+                                )
+    exit_button.grid(row=0, column=1, padx=20, pady=10)
 
     # Start server with provided configuration
-    def start_server_with_config(host_entry, port_entry):
+    def start_server_with_config(host_entry, port_entry, start_button, exit_button):
         host = host_var.get()
         port = int(port_var.get())
 
         # Disable entries while server is running
         host_entry.configure(state='disabled')
         port_entry.configure(state='disabled')
+        start_button.configure(state='disabled')
+        exit_button.configure(state="normal")
 
         # Start the server in a separate thread
         threading.Thread(
@@ -619,9 +629,47 @@ def create_gui():
             args=(host, port, log_text, update_connection_count), 
             daemon=True
         ).start()
+    
+    # Update connection count and enable/disable exit button
+    def update_connection_count(count):
+        connection_var.set(str(count))
+
+    # --- Function: On Closing ---
+    def on_closing(root, exit_button):
+        global server_running, server_socket, server_thread
+
+        # Initialize server_running to False if it's not already defined.
+        if 'server_running' not in globals():
+          global server_running
+          server_running = False
+
+        if active_connections == 0:
+            if server_running:
+                server_running = False  # Set the flag to stop the server loop
+                try:
+                    if server_socket:
+                        # Create a new socket to connect to the server
+                        temp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        temp_socket.connect((host_var.get(), int(port_var.get())))
+                        temp_socket.close()
+
+                        server_socket.shutdown(socket.SHUT_RDWR)
+                except OSError as e:
+                    global_logger.error(f"Error during shutdown: {e}")
+                finally:
+                    if server_socket:
+                        server_socket.close()
+                        server_socket = None
+                if server_thread and server_thread.is_alive():
+                    server_thread.join()
+            root.destroy()
+        else:
+            # If there are active connections, show a warning message
+            tk.messagebox.showwarning(
+                "Warning", "Cannot exit while there are active connections."
+            )
 
     root.mainloop()
-
 
 if __name__ == "__main__":    
     # Run the GUI
